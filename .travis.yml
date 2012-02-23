@@ -1,5 +1,5 @@
 before_install:
   - chmod +x ./bin/ci/get-android-sdk.sh
   - ./bin/ci/get-android-sdk.sh
-env: ANDROID_HOME=android-sdk-linux/
+env: ANDROID_HOME=/home/vagrant/builds/anthonydahanne/maven-android-plugin/android-sdk-linux/
 language: java
