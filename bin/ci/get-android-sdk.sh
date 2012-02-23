@@ -1,8 +1,11 @@
 #!/bin/sh
-echo "about to download Android SDK"
+echo "about to download Android SDK from http://dl.google.com/android/android-sdk_r16-linux.tgz"
 wget http://dl.google.com/android/android-sdk_r16-linux.tgz
-ls
+#ls
+echo "unzipping android-sdk_r16-linux.tgz"
 tar xvzf android-sdk_r16-linux.tgz
-ls android-sdk-linux
-android-sdk-linux/tool/android update sdk --no-ui -t platform –force
+#ls android-sdk-linux
+echo "getting some Android platforms"
+android-sdk-linux/tools/android update sdk --no-ui -t platform –force
+echo "here is the list of the downloaded platforms : "
 ls android-sdk-linux/platforms
