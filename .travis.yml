@@ -1,2 +1,2 @@
-before_install: ./bin/ci/make-it-rain.sh
+before_install: ./bin/ci/get-android-sdk.sh
 language: java
