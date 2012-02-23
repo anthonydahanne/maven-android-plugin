@@ -99,7 +99,7 @@ public class AndroidSdkTest {
         final AndroidSdk sdk4 = new AndroidSdk(new File(sdkTestSupport.getEnv_ANDROID_HOME()), "4");
         final AndroidSdk sdk7 = new AndroidSdk(new File(sdkTestSupport.getEnv_ANDROID_HOME()), "7");
         final AndroidSdk sdk8 = new AndroidSdk(new File(sdkTestSupport.getEnv_ANDROID_HOME()), "8");
-        final AndroidSdk sdk9 = new AndroidSdk(new File(sdkTestSupport.getEnv_ANDROID_HOME()), "9");
+        //final AndroidSdk sdk9 = new AndroidSdk(new File(sdkTestSupport.getEnv_ANDROID_HOME()), "9");
         final AndroidSdk sdk10 = new AndroidSdk(new File(sdkTestSupport.getEnv_ANDROID_HOME()), "10");
         final AndroidSdk sdk11 = new AndroidSdk(new File(sdkTestSupport.getEnv_ANDROID_HOME()), "11");
 
@@ -107,7 +107,7 @@ public class AndroidSdkTest {
         final AndroidSdk sdk1_6 = new AndroidSdk(new File(sdkTestSupport.getEnv_ANDROID_HOME()), "1.6");
         final AndroidSdk sdk2_1 = new AndroidSdk(new File(sdkTestSupport.getEnv_ANDROID_HOME()), "2.1");
         final AndroidSdk sdk2_2 = new AndroidSdk(new File(sdkTestSupport.getEnv_ANDROID_HOME()), "2.2");
-        final AndroidSdk sdk2_3_1 = new AndroidSdk(new File(sdkTestSupport.getEnv_ANDROID_HOME()), "2.3.1");
+        //final AndroidSdk sdk2_3_1 = new AndroidSdk(new File(sdkTestSupport.getEnv_ANDROID_HOME()), "2.3.1");
         final AndroidSdk sdk3_0 = new AndroidSdk(new File(sdkTestSupport.getEnv_ANDROID_HOME()), "3.0");
         final AndroidSdk sdk3_1 = new AndroidSdk(new File(sdkTestSupport.getEnv_ANDROID_HOME()), "3.1");
     }
