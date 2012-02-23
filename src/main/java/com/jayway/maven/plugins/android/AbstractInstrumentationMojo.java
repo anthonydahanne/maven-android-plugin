@@ -97,9 +97,9 @@ public abstract class AbstractInstrumentationMojo extends AbstractAndroidMojo {
      *   &lt;instrumentationRunner&gt;className&lt;/instrumentationRunner&gt;
      *   &lt;debug&gt;true|false&lt;/debug&gt;
      *   &lt;coverage&gt;true|false&lt;/coverage&gt;
-     *   &lt;logonly&gt;true|false&lt;/logonly&gt;  avd
-     *   &lt;testsize&gt;small|medium|large&lt;/testsize&gt;
-     *   &lt;createreport&gt;true|false&lt;/createreport&gt;
+     *   &lt;logOnly&gt;true|false&lt;/logOnly&gt;  avd
+     *   &lt;testSize&gt;small|medium|large&lt;/testSize&gt;
+     *   &lt;createReport&gt;true|false&lt;/createReport&gt;
      *   &lt;classes&gt;
      *     &lt;class&gt;your.package.name.YourTestClass&lt;/class&gt;
      *   &lt;/classes&gt;
@@ -115,8 +115,8 @@ public abstract class AbstractInstrumentationMojo extends AbstractAndroidMojo {
 
 
     /**
-     * Enables or disables integration test related goals. If <code>true</code> they will be run; if <code>false</code>,
-     * they will be skipped. If <code>auto</code>, they will run if any of the classes inherit from any class in
+     * Enables or disables integration test related goals. If <code>true</code> they will be skipped; if <code>false</code>,
+     * they will be run. If <code>auto</code>, they will run if any of the classes inherit from any class in
      * <code>junit.framework.**</code> or <code>android.test.**</code>.
      *
      * @parameter expression="${android.test.skip}" default-value="auto"
@@ -147,7 +147,7 @@ public abstract class AbstractInstrumentationMojo extends AbstractAndroidMojo {
      * @optional
      * @parameter default-value=false expression="${android.test.debug}"
      */
-    private boolean testDebug;
+    private Boolean testDebug;
 
 
     /**
@@ -157,7 +157,7 @@ public abstract class AbstractInstrumentationMojo extends AbstractAndroidMojo {
      * @optional
      * @parameter default-value=false expression="${android.test.coverage}"
      */
-    private boolean testCoverage;
+    private Boolean testCoverage;
 
     /**
      * Enable this flag to run a log only and not execute the tests.
@@ -165,7 +165,7 @@ public abstract class AbstractInstrumentationMojo extends AbstractAndroidMojo {
      * @optional
      * @parameter default-value=false expression="${android.test.logonly}"
      */
-    private boolean testLogOnly;
+    private Boolean testLogOnly;
 
     /**
      * If specified only execute tests of certain size as defined by
@@ -204,7 +204,7 @@ public abstract class AbstractInstrumentationMojo extends AbstractAndroidMojo {
      * @optional
      * @parameter default-value=true expression="${android.test.createreport}"
      */
-    private boolean testCreateReport;
+    private Boolean testCreateReport;
 
     /**
      * <p>Whether to execute tests only in given packages as part of the instrumentation tests.</p>
@@ -218,7 +218,7 @@ public abstract class AbstractInstrumentationMojo extends AbstractAndroidMojo {
      * @optional
      * @parameter expression="${android.test.packages}
      */
-    protected List testPackages;
+    protected List<String> testPackages;
 
     /**
      * <p>Whether to execute test classes which are specified as part of the instrumentation tests.</p>
@@ -232,7 +232,7 @@ public abstract class AbstractInstrumentationMojo extends AbstractAndroidMojo {
      * @optional
      * @parameter expression="${android.test.classes}
      */
-    protected List testClasses;
+    protected List<String> testClasses;
 
     private boolean classesExists;
     private boolean packagesExists;
@@ -241,13 +241,13 @@ public abstract class AbstractInstrumentationMojo extends AbstractAndroidMojo {
     private String parsedSkip;
     private String parsedInstrumentationPackage;
     private String parsedInstrumentationRunner;
-    private List parsedClasses;
-    private List parsedPackages;
+    private List<String> parsedClasses;
+    private List<String> parsedPackages;
     private String parsedTestSize;
-    private boolean parsedCoverage;
-    private boolean parsedDebug;
-    private boolean parsedLogOnly;
-    private boolean parsedCreateReport;
+    private Boolean parsedCoverage;
+    private Boolean parsedDebug;
+    private Boolean parsedLogOnly;
+    private Boolean parsedCreateReport;
 
     private String packagesList;
 
@@ -279,7 +279,7 @@ public abstract class AbstractInstrumentationMojo extends AbstractAndroidMojo {
                     "see http://developer.android.com/guide/developing/testing/testing_otheride.html");
         }
 
-        doWithDevices(new DeviceCallback() {
+        DeviceCallback instrumentationTestExecutor = new DeviceCallback() {
             public void doWithDevice(final IDevice device) throws MojoExecutionException, MojoFailureException {
                 RemoteAndroidTestRunner remoteAndroidTestRunner =
                     new RemoteAndroidTestRunner(parsedInstrumentationPackage, parsedInstrumentationRunner, device);
@@ -290,7 +290,7 @@ public abstract class AbstractInstrumentationMojo extends AbstractAndroidMojo {
                 }
 
                 if(classesExists) {
-                    remoteAndroidTestRunner.setClassNames((String[]) parsedClasses.toArray());
+                    remoteAndroidTestRunner.setClassNames(parsedClasses.toArray(new String[parsedClasses.size()]));
                     getLog().info("Running tests for specified test classes/methods: " + parsedClasses);
                 }
 
@@ -329,22 +329,66 @@ public abstract class AbstractInstrumentationMojo extends AbstractAndroidMojo {
                     throw new MojoExecutionException("IO problem", e);
                 }
             }
-        });
+        };
+
+        instrumentationTestExecutor = new ScreenshotServiceWrapper(instrumentationTestExecutor, project, getLog());
+
+        doWithDevices(instrumentationTestExecutor);
     }
 
     private void parseConfiguration() {
         // we got config in pom ... lets use it,
         if (test != null) {
-            parsedSkip = test.getSkip();
-            parsedInstrumentationPackage = test.getInstrumentationPackage();
-            parsedInstrumentationRunner = test.getInstrumentationRunner();
-            parsedClasses = test.getClasses();
-            parsedPackages = test.getPackages();
-            parsedTestSize = test.getTestSize();
-            parsedCoverage= test.isCoverage();
-            parsedDebug= test.isDebug();
-            parsedLogOnly = test.isLogOnly();
-            parsedCreateReport = test.isCreateReport();
+            if (StringUtils.isNotEmpty(test.getSkip())) {
+                parsedSkip = test.getSkip();
+            } else {
+                parsedSkip = testSkip;
+            }
+            if (StringUtils.isNotEmpty(test.getInstrumentationPackage())) {
+                parsedInstrumentationPackage = test.getInstrumentationPackage();
+            } else {
+                parsedInstrumentationPackage = testInstrumentationPackage;
+            }
+            if (StringUtils.isNotEmpty(test.getInstrumentationRunner())) {
+                parsedInstrumentationRunner = test.getInstrumentationRunner();
+            } else {
+                parsedInstrumentationRunner = testInstrumentationRunner;
+            }
+            if (test.getClasses() != null && !test.getClasses().isEmpty()) {
+                parsedClasses = test.getClasses();
+            } else {
+                parsedClasses = testClasses;
+            }
+            if (test.getPackages() != null && !test.getPackages().isEmpty()) {
+                parsedPackages = test.getPackages();
+            } else {
+                parsedPackages = testPackages;
+            }
+            if (StringUtils.isNotEmpty(test.getTestSize())) {
+                parsedTestSize = test.getTestSize();
+            } else {
+                parsedTestSize = testTestSize;
+            }
+            if (test.isCoverage() != null) {
+                parsedCoverage= test.isCoverage();
+            } else {
+                parsedCoverage = testCoverage;
+            }
+            if (test.isDebug() != null) {
+                parsedDebug = test.isDebug();
+            } else {
+                parsedDebug = testDebug;
+            }
+            if (test.isLogOnly() != null) {
+                parsedLogOnly = test.isLogOnly();
+            } else {
+                parsedLogOnly = testLogOnly;
+            }
+            if (test.isCreateReport() != null) {
+                parsedCreateReport = test.isCreateReport();
+            } else {
+                parsedCreateReport = testCreateReport;
+            }
         }
         // no pom, we take properties
         else {
@@ -393,7 +437,8 @@ public abstract class AbstractInstrumentationMojo extends AbstractAndroidMojo {
                 getLog().info("No InstrumentationRunner found - skipping tests");
                 return false;
             }
-            return AndroidTestFinder.containsAndroidTests(new File(project.getBuild().getDirectory(), "android-classes"));
+            return AndroidTestFinder.containsAndroidTests(new File(project.getBuild()
+                    .getOutputDirectory()));
         }
 
         throw new MojoFailureException("android.test.skip must be configured as 'true', 'false' or 'auto'.");

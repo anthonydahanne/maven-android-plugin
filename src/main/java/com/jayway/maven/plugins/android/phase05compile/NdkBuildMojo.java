@@ -63,6 +63,18 @@ public class NdkBuildMojo extends AbstractAndroidMojo {
      */
     private Ndk ndk;
 
+    /** Allows for overriding the default ndk-build executable.
+     *
+     * @parameter expression="${android.ndk.ndk-build-executable}"
+     */
+    private String ndkBuildExecutable;
+
+    /**
+     *
+     * @parameter expression="${android.ndk.ndk-build-directory}" default="${basedir}";
+     */
+    private String ndkBuildDirectory;
+
     /**
      * <p>Parameter designed to pick up <code>-Dandroid.ndk.path</code> in case there is no pom with an
      * <code>&lt;ndk&gt;</code> configuration tag.</p>
@@ -116,17 +128,11 @@ public class NdkBuildMojo extends AbstractAndroidMojo {
      */
     protected File ndkOutputDirectory;
 
-    /** <p>Folder containing native, shared libraries compiled and linked by the NDK.</p>
-     *
-     * @parameter expression="${android.nativeLibrariesDirectory}" default-value="${project.basedir}/libs"
-     */
-    private File nativeSharedLibrariesDirectory;
-
     /** <p>Folder containing native, static libraries compiled and linked by the NDK.</p>
      *
-     * @parameter expression="${android.nativeStaticLibrariesDirectory}" default-value="${project.basedir}/obj/local"
+     * @parameter expression="${android.nativeLibrariesOutputDirectory}" default-value="${project.basedir}/obj/local"
      */
-    private File nativeStaticLibrariesDirectory;
+    private File nativeLibrariesOutputDirectory;
 
     /** <p>Target to invoke on the native makefile.</p>
      *
@@ -240,14 +246,21 @@ public class NdkBuildMojo extends AbstractAndroidMojo {
      * Defines the regular expression used to detect whether error/warning output from ndk-build is a minor compile warning
      * or is actually an error which should cause the build to fail.
      *
+     * If the pattern matches, the output from the compiler will <strong>not</strong> be considered an error and compile
+     * will be successful.
+     *
      * @parameter expression="${android.ndk.build.build-warnings-regular-expression}" default=".*[warning|note]: .*"
      */
     private String buildWarningsRegularExpression = ".*[warning|note]: .*";
 
     public void execute() throws MojoExecutionException, MojoFailureException {
 
+        // Validate the NDK
+        final File ndkBuildFile = new File(getAndroidNdk().getNdkBuildPath());
+        NativeHelper.validateNDKVersion(ndkBuildFile.getParentFile());
+
         // This points 
-        File nativeLibDirectory = new File((project.getPackaging().equals("a") ? nativeStaticLibrariesDirectory : nativeSharedLibrariesDirectory), ndkArchitecture );
+        File nativeLibDirectory = new File( nativeLibrariesOutputDirectory, ndkArchitecture );
 
         final boolean libsDirectoryExists = nativeLibDirectory.exists();
 
@@ -312,8 +325,8 @@ public class NdkBuildMojo extends AbstractAndroidMojo {
         File localCIncludesFile = null;
         //
         try {
-            localCIncludesFile = File.createTempFile("android_maven_plugin_local_c_includes", ".tmp");
-            // localCIncludesFile.deleteOnExit();
+            localCIncludesFile = File.createTempFile("android_maven_plugin_makefile_captures", ".tmp");
+            localCIncludesFile.deleteOnExit();
             executor.addEnvironment( "ANDROID_MAVEN_PLUGIN_LOCAL_C_INCLUDES_FILE", localCIncludesFile.getAbsolutePath());
         } catch (IOException e) {
             throw new MojoExecutionException(e.getMessage());
@@ -330,7 +343,11 @@ public class NdkBuildMojo extends AbstractAndroidMojo {
         final List<String> commands = new ArrayList<String>();
 
         commands.add( "-C" );
-        commands.add( project.getBasedir().getAbsolutePath() );
+        if (ndkBuildDirectory == null)
+        {
+            ndkBuildDirectory = project.getBasedir().getAbsolutePath();
+        }
+        commands.add( ndkBuildDirectory );
 
         if ( ndkBuildAdditionalCommandline != null ) {
             String[] additionalCommands = ndkBuildAdditionalCommandline.split( " " );
@@ -344,11 +361,11 @@ public class NdkBuildMojo extends AbstractAndroidMojo {
         if ( target != null ) {
             commands.add(target);
         }
-        else if ( "a".equals( project.getPackaging() ) ) {
+        else {
             commands.add( project.getArtifactId() );
         }
 
-        final String ndkBuildPath = getAndroidNdk().getNdkBuildPath();
+        final String ndkBuildPath = resolveNdkBuildExecutable();
         getLog().info( ndkBuildPath + " " + commands.toString() );
 
         try {
@@ -383,7 +400,7 @@ public class NdkBuildMojo extends AbstractAndroidMojo {
             getLog().info( "Cleaning up native library output directory after build" );
             getLog().debug( "Removing directory: " + directoryToRemove );
             if ( !directoryToRemove.delete() ) {
-                getLog().warn( "Could not remove directory, marking as delete on exit" );
+                getLog().warn("Could not remove directory, marking as delete on exit");
                 directoryToRemove.deleteOnExit();
             }
         }
@@ -406,8 +423,14 @@ public class NdkBuildMojo extends AbstractAndroidMojo {
             // slight limitation at this stage - we only handle a single .so artifact
             if ( files == null || files.length != 1 ) {
                 getLog().warn( "Error while detecting native compile artifacts: " + ( files == null || files.length == 0 ? "None found" : "Found more than 1 artifact" ) );
-                if ( files != null ) {
-                    getLog().warn( "Currently, only a single, final native library is supported by the build" );
+                if ( files != null && files.length > 1) {
+                    getLog().error( "Currently, only a single, final native library is supported by the build" );
+                    throw new MojoExecutionException( "Currently, only a single, final native library is supported by the build" );
+                }
+                else
+                {
+                    getLog().error( "No native compiled library found, did the native compile complete successfully?" );
+                    throw new MojoExecutionException( "No native compiled library found, did the native compile complete successfully?" );
                 }
             } else {
                 getLog().debug( "Adding native compile artifact: " + files[ 0 ] );
@@ -420,7 +443,15 @@ public class NdkBuildMojo extends AbstractAndroidMojo {
         // Process conditionally any of the headers to include into the header archive file
         processHeaderFileIncludes(localCIncludesFile);
 
+    }
 
+    private String resolveNdkBuildExecutable() throws MojoExecutionException {
+        if (ndkBuildExecutable != null)
+        {
+            getLog().debug("ndk-build overriden, using " + ndkBuildExecutable);
+            return ndkBuildExecutable;
+        }
+        return getAndroidNdk().getNdkBuildPath();
     }
 
     private void processHeaderFileIncludes(File localCIncludesFile) throws MojoExecutionException {
@@ -440,7 +471,8 @@ public class NdkBuildMojo extends AbstractAndroidMojo {
                         String[] includes = localCIncludes.split(" ");
                         for (String include : includes) {
                             final HeaderFilesDirective headerFilesDirective = new HeaderFilesDirective();
-                            headerFilesDirective.setDirectory(include);
+                            File includeDir = new File( project.getBasedir(), include );
+                            headerFilesDirective.setDirectory(includeDir.getAbsolutePath());
                             headerFilesDirective.setIncludes(new String[]{"**/*.h"});
                             finalHeaderFilesDirectives.add(headerFilesDirective);
                         }
@@ -482,7 +514,7 @@ public class NdkBuildMojo extends AbstractAndroidMojo {
             mavenArchiveConfiguration.setAddMavenDescriptor( false );
 
             mavenArchiver.createArchive( project, mavenArchiveConfiguration );
-            projectHelper.attachArtifact( project, "har", jarFile );
+            projectHelper.attachArtifact( project, "har", ( ndkClassifier != null ? ndkClassifier : ndkArchitecture ),jarFile );
 
         } catch ( Exception e ) {
             throw new MojoExecutionException( e.getMessage() );

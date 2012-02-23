@@ -22,7 +22,9 @@ import com.android.ddmlib.InstallException;
 import com.jayway.maven.plugins.android.common.AetherHelper;
 import com.jayway.maven.plugins.android.common.AndroidExtension;
 import com.jayway.maven.plugins.android.common.DeviceHelper;
+import com.jayway.maven.plugins.android.configuration.Proguard;
 import com.jayway.maven.plugins.android.configuration.Sdk;
+import com.jayway.maven.plugins.android.phase04processclasses.ProguardMojo;
 import org.apache.commons.jxpath.JXPathContext;
 import org.apache.commons.jxpath.JXPathNotFoundException;
 import org.apache.commons.jxpath.xml.DocumentContainer;
@@ -409,6 +411,10 @@ public abstract class AbstractAndroidMojo extends AbstractMojo {
                 continue;
             }
 
+            if ("apk".equalsIgnoreCase(artifact.getType())) {
+                continue;
+            }
+
            results.add(artifact);
         }
         return results;
@@ -513,7 +519,7 @@ public abstract class AbstractAndroidMojo extends AbstractMojo {
                         + DeviceHelper.getDescriptiveName(device));
                 } catch (InstallException e) {
                     throw new MojoExecutionException("Install of "
-                        + apkFile.getAbsolutePath() + "failed.", e);
+                        + apkFile.getAbsolutePath() + " failed.", e);
                 }
             }
         });
@@ -569,23 +575,31 @@ public abstract class AbstractAndroidMojo extends AbstractMojo {
             if (devices.size() > 0) {
                 if (StringUtils.isNotBlank(device)) {
                     getLog().info("android.device parameter set to " + device);
+                    boolean deviceFound = false;
                     for (IDevice idevice : devices) {
                         // use specified device or all emulators or all devices
                         if ("emulator".equals(device) && idevice.isEmulator()) {
                             getLog().info("Emulator " + DeviceHelper.getDescriptiveName(idevice) + " found.");
+                            deviceFound = true;
                             deviceCallback.doWithDevice(idevice);
                         } else if ("usb".equals(device) && !idevice.isEmulator()) {
                             getLog().info("Device " + DeviceHelper.getDescriptiveName(idevice) + " found.");
+                            deviceFound = true;
                             deviceCallback.doWithDevice(idevice);
                         } else if (idevice.isEmulator()
-                                && (idevice.getAvdName().equalsIgnoreCase(device)
-                                    || idevice.getSerialNumber().equalsIgnoreCase(device))) {
+                                && (device.equalsIgnoreCase(idevice.getAvdName())
+                                    || device.equalsIgnoreCase(idevice.getSerialNumber()))) {
                             getLog().info("Emulator " + DeviceHelper.getDescriptiveName(idevice) + " found.");
+                            deviceFound = true;
                             deviceCallback.doWithDevice(idevice);
-                        } else if (!idevice.isEmulator() && idevice.getSerialNumber().equals(device)) {
+                        } else if (!idevice.isEmulator() && device.equals(idevice.getSerialNumber())) {
                             getLog().info("Device " + DeviceHelper.getDescriptiveName(idevice) + " found.");
+                            deviceFound = true;
                             deviceCallback.doWithDevice(idevice);
                         }
+                    }
+                    if (!deviceFound) {
+                        throw new MojoExecutionException("No device found for android.device=" + device);
                     }
                 } else {
                     getLog().info("android.device parameter not set, using all attached devices");
@@ -637,7 +651,7 @@ public abstract class AbstractAndroidMojo extends AbstractMojo {
                 } catch (InstallException e) {
                     result.set(false);
                     throw new MojoExecutionException("Uninstall of " +
-                        packageName + "failed.", e);
+                        packageName + " failed.", e);
                 }
             }
         });

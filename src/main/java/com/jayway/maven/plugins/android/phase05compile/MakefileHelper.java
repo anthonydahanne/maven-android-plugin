@@ -47,6 +47,12 @@ public class MakefileHelper {
         makeFile.append( '\n' );
         makeFile.append("$(shell echo \"LOCAL_PATH=$(LOCAL_PATH)\" >> $(ANDROID_MAVEN_PLUGIN_LOCAL_C_INCLUDES_FILE))");
         makeFile.append( '\n' );
+        makeFile.append("$(shell echo \"LOCAL_MODULE_FILENAME=$(LOCAL_MODULE_FILENAME)\" >> $(ANDROID_MAVEN_PLUGIN_LOCAL_C_INCLUDES_FILE))");
+        makeFile.append( '\n' );
+        makeFile.append("$(shell echo \"LOCAL_MODULE=$(LOCAL_MODULE)\" >> $(ANDROID_MAVEN_PLUGIN_LOCAL_C_INCLUDES_FILE))");
+        makeFile.append( '\n' );
+        makeFile.append("$(shell echo \"LOCAL_CFLAGS=$(LOCAL_CFLAGS)\" >> $(ANDROID_MAVEN_PLUGIN_LOCAL_C_INCLUDES_FILE))");
+        makeFile.append( '\n' );
 
         if ( !artifacts.isEmpty() )
         {
@@ -74,7 +80,7 @@ public class MakefileHelper {
                 if (useHeaderArchives)
                 {
                     try {
-                        Artifact harArtifact = new DefaultArtifact( artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(), artifact.getScope(), "har", null, artifact.getArtifactHandler() );
+                        Artifact harArtifact = new DefaultArtifact( artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(), artifact.getScope(), "har", artifact.getClassifier(), artifact.getArtifactHandler() );
                         final Artifact resolvedHarArtifact = AetherHelper.resolveArtifact( harArtifact, repoSystem, repoSession, projectRepos );
 
                         File includeDir = new File( System.getProperty( "java.io.tmpdir" ), "android_maven_plugin_native_includes" + System.currentTimeMillis() + "_" + resolvedHarArtifact.getArtifactId());

@@ -15,41 +15,41 @@ public class Test {
       */
     private String skip;
     /**
-      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testSkip}
+      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testInstrumentationPackage}
       */
     private String instrumentationPackage;
     /**
-      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testSkip}
+      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testInstrumentationRunner}
       */
     private String instrumentationRunner;
     /**
-      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testSkip}
+      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testDebug}
       */
-    private boolean debug;
+    private Boolean debug;
     /**
-      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testSkip}
+      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testCoverage}
       */
-    private boolean coverage;
+    private Boolean coverage;
     /**
-      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testSkip}
+      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testLogOnly}
       */
-    private boolean logOnly;
+    private Boolean logOnly;
     /**
-      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testSkip}
+      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testSize}
       */
     private String testSize;
     /**
-      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testSkip}
+      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testCreateReport}
       */
-    private boolean createReport;
+    private Boolean createReport;
     /**
-      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testSkip}
+      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testPackages}
       */
-    protected List packages;
+    protected List<String> packages;
     /**
-      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testSkip}
+      * Mirror of {@link com.jayway.maven.plugins.android.AbstractInstrumentationMojo#testClasses}
       */
-    protected List classes;
+    protected List<String> classes;
 
     public String getSkip() {
         return skip;
@@ -63,15 +63,15 @@ public class Test {
         return instrumentationRunner;
     }
 
-    public boolean isDebug() {
+    public Boolean isDebug() {
         return debug;
     }
 
-    public boolean isCoverage() {
+    public Boolean isCoverage() {
         return coverage;
     }
 
-    public boolean isLogOnly() {
+    public Boolean isLogOnly() {
         return logOnly;
     }
 
@@ -79,15 +79,15 @@ public class Test {
         return testSize;
     }
 
-    public boolean isCreateReport() {
+    public Boolean isCreateReport() {
         return createReport;
     }
 
-    public List getPackages() {
+    public List<String> getPackages() {
         return packages;
     }
 
-    public List getClasses() {
+    public List<String> getClasses() {
         return classes;
     }
 }

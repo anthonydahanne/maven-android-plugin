@@ -20,8 +20,10 @@ import com.jayway.maven.plugins.android.AbstractAndroidMojo;
 import com.jayway.maven.plugins.android.CommandExecutor;
 import com.jayway.maven.plugins.android.ExecutionException;
 import com.jayway.maven.plugins.android.configuration.Dex;
+import com.jayway.maven.plugins.android.phase04processclasses.ProguardMojo;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.model.Resource;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -32,7 +34,9 @@ import org.codehaus.plexus.archiver.util.DefaultFileSet;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Converts compiled Java classes to the Android dex format.
@@ -66,7 +70,7 @@ public class DexMojo extends AbstractAndroidMojo {
     /**
      * Extra JVM Arguments. Using these you can e.g. increase memory for the jvm running the build.
      *
-     * @parameter expression="${android.dex.jvmArguments}"
+     * @parameter expression="${android.dex.jvmArguments}" default-value="-Xmx1024M"
      * @optional
      */
     private String[] dexJvmArguments;
@@ -85,7 +89,7 @@ public class DexMojo extends AbstractAndroidMojo {
      */
     private boolean dexNoLocals;
 
-    /**
+    /**                                         
      * Decides whether to pass the --no-optimize flag to dx.
      *
      * @parameter expression="${android.dex.optimize}" default-value="true"
@@ -103,16 +107,18 @@ public class DexMojo extends AbstractAndroidMojo {
         executor.setLogger(this.getLog());
 
         File outputFile = new File(project.getBuild().getDirectory() + File.separator + "classes.dex");
-        File inputFile = new File(project.getBuild().getDirectory() + File.separator + project.getBuild().getFinalName() + ".jar");
+
+        Set<File> inputFiles = getDexInputFiles();
 
         parseConfiguration();
         
         if (generateApk) {
-            runDex(executor, outputFile, inputFile);
+            runDex(executor, outputFile, inputFiles);
         }
 
         if (attachJar) {
-            projectHelper.attachArtifact(project, "jar", project.getArtifact().getClassifier(), inputFile);
+            File jarFile = new File(project.getBuild().getDirectory() + File.separator + project.getBuild().getFinalName() + ".jar");
+            projectHelper.attachArtifact(project, "jar", project.getArtifact().getClassifier(), jarFile);
         }
 
         if (attachSources) {
@@ -122,13 +128,61 @@ public class DexMojo extends AbstractAndroidMojo {
         }
     }
 
+    /**
+     * Gets the input files for dex.  This is a combination of directories and jar files.
+     *
+     * @return
+     */
+    private Set<File> getDexInputFiles() {
+
+        Set<File> inputs = new HashSet<File>();
+
+        // ugly, don't know a better way to get this in mvn
+        File proguardJar = new File(project.getBuild().getDirectory(), ProguardMojo.PROGUARD_OBFUSCATED_JAR);
+
+        getLog().debug("Checking for existence of: " + proguardJar.toString());
+
+        if (proguardJar.exists()) {
+            // progurad has been run, use this jar
+            getLog().debug("Obfuscated jar exists, using that as input");
+            inputs.add(proguardJar);
+        } else {
+            getLog().debug("Using non-obfuscated input");
+            // no proguard, use original config
+            inputs.add(new File(project.getBuild().getOutputDirectory()));
+            for (Artifact artifact : getAllRelevantDependencyArtifacts()) {
+                inputs.add(artifact.getFile().getAbsoluteFile());
+            }
+        }
+
+        return inputs;
+    }
+
     private void parseConfiguration() {
         // config in pom found
         if (dex != null) {
-            parsedJvmArguments = dex.getJvmArguments();
-            parsedCoreLibrary = dex.isCoreLibrary();
-            parsedNoLocals = dex.isNoLocals();
-            parsedOptimize = dex.isOptimize();
+            // the if statements make sure that properties/command line parameter overrides configuration
+            // and that the dafaults apply in all cases;
+            if (dex.getJvmArguments() == null) {
+                parsedJvmArguments =  dexJvmArguments;
+            } else {
+                parsedJvmArguments = dex.getJvmArguments();
+            }
+            if (dex.isCoreLibrary() == null) {
+                parsedCoreLibrary = dexCoreLibrary;
+            } else {
+                parsedCoreLibrary = dex.isCoreLibrary();
+            }
+            if (dex.isNoLocals() == null) {
+                parsedNoLocals = dexNoLocals;
+            } else {
+                parsedNoLocals = dex.isNoLocals();
+            }
+            if (dex.isOptimize() == null) {
+                parsedOptimize = dexOptimize;
+            } else {
+                parsedOptimize = dex.isOptimize();
+            }
         } else {
             parsedJvmArguments = dexJvmArguments;
             parsedCoreLibrary = dexCoreLibrary;
@@ -138,8 +192,7 @@ public class DexMojo extends AbstractAndroidMojo {
     }
 
     private void runDex(CommandExecutor executor, File outputFile,
-                        File inputFile) throws MojoExecutionException {
-        File classesOutputDirectory = new File(project.getBuild().getDirectory(), "android-classes");
+                        Set<File> inputFiles) throws MojoExecutionException {
         List<String> commands = new ArrayList<String>();
         if (parsedJvmArguments != null) {
             for (String jvmArgument : parsedJvmArguments) {
@@ -165,7 +218,11 @@ public class DexMojo extends AbstractAndroidMojo {
         if (parsedNoLocals) {
         	commands.add("--no-locals");
         }
-        commands.add(classesOutputDirectory.getAbsolutePath());
+
+        for (File inputFile : inputFiles) {
+            getLog().debug("Adding dex input: " + inputFile.getAbsolutePath());
+            commands.add(inputFile.getAbsolutePath());
+        }
 
         final String javaExecutable = getJavaExecutable().getAbsolutePath();
         getLog().info(javaExecutable + " " + commands.toString());
