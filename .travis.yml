@@ -1,1 +1,2 @@
+before_install: ./bin/ci/make-it-rain.sh
 language: java
