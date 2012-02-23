@@ -1,2 +1,4 @@
-before_install: ./bin/ci/get-android-sdk.sh
+before_install:
+  - chmod +x ./bin/ci/get-android-sdk.sh
+  - ./bin/ci/get-android-sdk.sh
 language: java
