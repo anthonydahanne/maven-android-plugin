@@ -1,4 +1,4 @@
-env: ANDROID_HOME=android-sdk-linux/
+env: ANDROID_HOME=/home/vagrant/builds/anthonydahanne/maven-android-plugin/android-sdk-linux/
 language: java
 before_install: /bin/sh ./bin/ci/get-android-sdk.sh
 install: mvn install
